@@ -1,12 +1,13 @@
 import os
+import re
 import logging
 from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-BASE_DIR = os.path.join(os.path.dirname(__file__), 'AI Agent Assessment - Candidate Pack')
+BASE_DIR = os.path.join(os.path.dirname(__file__), 'documents')
 
 PDF_FILES = [
     '01_Support_Policy_v3_CURRENT.pdf',
@@ -26,7 +27,8 @@ def read_pdf_and_chunk(pdf_file: str, chunk_size: int = 1000, chunk_overlap: int
 
     try:
         reader = PdfReader(pdf_path)
-        full_text = ''.join([page.extract_text() or '' for page in reader.pages])
+        full_text = '\n'.join([page.extract_text() or '' for page in reader.pages])
+        full_text = re.sub(r'\s+', ' ', full_text).strip()
         logging.info(f"Extracted text from {pdf_file}, length: {len(full_text)} characters.")
     except Exception as e:
         logging.error(f"Failed to read or extract text from {pdf_file}: {e}")
