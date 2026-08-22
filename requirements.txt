@@ -1,0 +1,10 @@
+streamlit>=1.40
+openai>=1.60
+chromadb>=0.5
+langchain-chroma>=0.2
+langchain-openai>=0.3
+langchain-text-splitters>=0.3
+pandas>=2.2
+PyPDF2>=3.0
+openpyxl>=3.1
+python-dotenv>=1.0
