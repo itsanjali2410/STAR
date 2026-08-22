@@ -2,3 +2,13 @@
 README.md
 .DS_Store
 uv.lock
+.venv/
+/.vscode/
+__pycache__/db_loader.cpython-314.pyc
+.gitignore
+.gitignore
+__pycache__/test_query_system.cpython-314.pyc
+.gitignore
+__pycache__/tools.cpython-314.pyc
+__pycache__/pdf_parser.cpython-314.pyc
+.env
