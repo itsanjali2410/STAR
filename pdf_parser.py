@@ -4,55 +4,34 @@ import logging
 from PyPDF2 import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 BASE_DIR = os.path.join(os.path.dirname(__file__), 'documents')
 
-PDF_FILES = [
-    '01_Support_Policy_v3_CURRENT.pdf',
-    '02_Support_Policy_v2_DEPRECATED.pdf',
-    '03_Cancellation_and_Service_Credit_SOP_v4.pdf',
-    '04_Product_Operations_Guide_and_Known_Issues.pdf',
-    '05_Northstar_Logistics_Enterprise_Agreement.pdf',
-    '06_LumenWorks_Service_Agreement.pdf'
-]
 
-def read_pdf_and_chunk(pdf_file: str, chunk_size: int = 1000, chunk_overlap: int = 150):
-    """Read PDF file, extract text, chunk it, and add metadata tags."""
-    pdf_path = os.path.join(BASE_DIR, pdf_file)
-    if not os.path.isfile(pdf_path):
-        logging.error(f"PDF file not found: {pdf_path}")
-        return [], []
-
-    try:
-        reader = PdfReader(pdf_path)
-        full_text = '\n'.join([page.extract_text() or '' for page in reader.pages])
-        full_text = re.sub(r'\s+', ' ', full_text).strip()
-        logging.info(f"Extracted text from {pdf_file}, length: {len(full_text)} characters.")
-    except Exception as e:
-        logging.error(f"Failed to read or extract text from {pdf_file}: {e}")
-        return [], []
-
-    try:
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        chunks = text_splitter.split_text(full_text)
-        metadata = [{'source': pdf_file} for _ in chunks]
-        logging.info(f"Split {pdf_file} into {len(chunks)} chunks.")
-    except Exception as e:
-        logging.error(f"Text chunking failed for {pdf_file}: {e}")
-        return [], []
-
-    return chunks, metadata
+def read_pdf_text(pdf_file: str) -> str:
+    """Extract and whitespace-normalise the full text of one PDF."""
+    reader = PdfReader(os.path.join(BASE_DIR, pdf_file))
+    text = '\n'.join(page.extract_text() or '' for page in reader.pages)
+    return re.sub(r'\s+', ' ', text).strip()
 
 
-def process_all_pdfs():
-    """Process all predefined PDF files, chunk them, and gather all chunks and metadata."""
-    all_chunks = []
-    all_metadata = []
-    for pdf_file in PDF_FILES:
-        chunks, metadata = read_pdf_and_chunk(pdf_file)
-        all_chunks.extend(chunks)
-        all_metadata.extend(metadata)
-    logging.info(f"Processed {len(PDF_FILES)} PDFs into {len(all_chunks)} chunks.")
-    return all_chunks, all_metadata
+def load_all_documents(chunk_size: int = 800, chunk_overlap: int = 120):
+    """Load every PDF in documents/.
+
+    Returns (chunks, metadatas, texts): chunks + per-chunk {'source': filename}
+    metadata for the vector store, and texts = {filename: full_text} for tools that
+    need a whole document (e.g. a customer's agreement).
+    """
+    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    chunks, metadatas, texts = [], [], {}
+    for pdf_file in sorted(f for f in os.listdir(BASE_DIR) if f.lower().endswith('.pdf')):
+        try:
+            text = read_pdf_text(pdf_file)
+        except Exception as e:
+            logging.error(f"Failed to read {pdf_file}: {e}")
+            continue
+        texts[pdf_file] = text
+        for chunk in splitter.split_text(text):
+            chunks.append(chunk)
+            metadatas.append({'source': pdf_file})
+    logging.info(f"Loaded {len(texts)} PDFs into {len(chunks)} chunks.")
+    return chunks, metadatas, texts
