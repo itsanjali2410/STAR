@@ -5,5 +5,3 @@ __pycache__/
 .DS_Store
 .vscode/
 .streamlit/secrets.toml
-.streamlit/config.toml
-.python-version
