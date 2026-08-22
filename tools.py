@@ -1,7 +1,7 @@
 import logging
 from sqlite3 import Connection
 from typing import List, Dict, Optional
-from langchain.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 # Hard-coded roles for access control
 AUTHORIZED_ROLES_DOC_SEARCH = {'admin', 'support_agent', 'manager'}
