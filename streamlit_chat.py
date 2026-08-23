@@ -1,4 +1,6 @@
 import logging
+import os
+
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
@@ -14,10 +16,31 @@ st.set_page_config(page_title="ParcelPilot Support", page_icon="📦", layout="w
 logging.basicConfig(level=logging.INFO)
 
 
+def ensure_api_key():
+    """Local runs read .env; Streamlit Cloud injects st.secrets. Support both."""
+    load_dotenv()
+    if not os.getenv("OPENAI_API_KEY"):
+        try:
+            os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+        except Exception:
+            st.error(
+                "**OPENAI_API_KEY is not set.**\n\n"
+                "- Locally: copy `.env.example` to `.env` and add your key.\n"
+                "- On Streamlit Cloud: Manage app -> Settings -> Secrets, then add\n"
+                "  `OPENAI_API_KEY = \"sk-...\"` and reboot."
+            )
+            st.stop()
+    if os.getenv("OPENAI_MODEL"):
+        return
+    try:  # optional override
+        os.environ["OPENAI_MODEL"] = st.secrets["OPENAI_MODEL"]
+    except Exception:
+        pass
+
+
 @st.cache_resource(show_spinner="Loading documents and data…")
 def load_resources():
     """Parse the data pack once per server process (cached across reruns/sessions)."""
-    load_dotenv()
     sheets, conn = load_excel_to_memory()
     chunks, metas, texts = load_all_documents()
     vectordb = Chroma.from_texts(chunks, OpenAIEmbeddings(), metadatas=metas)
@@ -26,6 +49,7 @@ def load_resources():
 
 # Re-inject on EVERY rerun, not just cache misses: Streamlit re-imports modules on
 # reload, which resets tools.py's globals while load_resources() stays cached.
+ensure_api_key()
 conn, vectordb, doc_texts, SNAPSHOT = load_resources()
 tools.setup(conn, vectordb, doc_texts, SNAPSHOT)
 
