@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 .vscode/
 .streamlit/secrets.toml
+project_code.md
+project_code.txt
